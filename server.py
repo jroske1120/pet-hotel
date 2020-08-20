@@ -20,6 +20,7 @@ app = Flask(__name__)
 # db = "dbname=%s user=%s password=%s host=%s " % (url.path[1:], url.username, url.password, url.hostname)
 db = "dbname=%s host=%s " % ('pet_hotel', 'localhost')
 schema = "schema.sql"
+# conn = None
 conn = psycopg2.connect(db)
 conn.autocommit = True
 
@@ -35,6 +36,8 @@ def petRouter():
       rows = cur.fetchall()
       colnames = [desc[0] for desc in cur.description]
       # cur.close()
+      conn.commit()
+
       print(colnames)
       response = []
       for x in range( 0, len(rows) ):
@@ -45,20 +48,28 @@ def petRouter():
       return jsonify(response)
     elif request.method=='POST' :
       #data = request.data
+      # conn.autocommit = False
       data = request.get_json()
       print("request data", data['name'])
 
       cur.execute("""INSERT INTO "pet" ("name", "breed", "color")
                   VALUES 
-                  ('{}', '{}', '{}');""".format(data['name'], data['breed'], data['color']))
-
-      # print(Pet)
-
+                  ('{}', '{}', '{}') RETURNING id;""".format(data['name'], data['breed'], data['color']))
+      petId = cur.fetchone()[0]
+      print("petID is:", petId)
+      cur.execute("""INSERT INTO "pet_owner" ("pet_id", "owner_id")
+                  VALUES ({}, {})""".format( petId, data['owner'] ))
+    #   conn.commit()
+      # conn.close()
       return Response('', status=201, mimetype='application/json')
 
   except Exception as e:
     print(e)
     return Response(e)
+  finally:
+    # if conn is not None:
+    print('inside finally')
+    conn.close()
 
 
 # add an owner
@@ -68,6 +79,7 @@ def addOwnerRouter(name):
     cur.execute("""INSERT INTO "owner" ("name")
 VALUES 
 ('{}');""".format(name))
+    conn.commit()
 
     print(name)
 
@@ -75,6 +87,10 @@ VALUES
   except Exception as e:
     print(e)
     return []
+  finally:
+    if conn is not None:
+      conn.close()
+
 
 # Add a pet
 # pet = {
@@ -114,11 +130,32 @@ def deletePetRouter(id):
   try:
     cur.execute("""DELETE FROM pet WHERE id ={};""".format(id))
     print(id)
+    conn.commit()
 
     return Response('', status=201, mimetype='application/json')
   except Exception as e:
     print(e)
     return []
+  finally:
+    if conn is not None:
+      conn.close()
+
+
+@app.route('/pets/<id>', methods=['PUT'])
+def checkInPetRouter(id):
+  try:
+    cur.execute("""UPDATE pet SET "checkedIn" = true WHERE id ={};""".format(id))
+    print(id)
+    conn.commit()
+
+    return Response('', status=201, mimetype='application/json')
+  except Exception as e:
+    print(e)
+    return []
+  finally:
+    if conn is not None:
+      conn.close()
+
     #   This is how it looks in js
   #   pool.query("""SELECT * FROM movies ORDER BY title ASC""")
   #     .then( (results) => 
