@@ -13,13 +13,11 @@ VALUES
 ('Gatsby', 'Cat', 'White', TRUE),
 ('Juniper', 'Cat', 'Tabby', FALSE);
 
-
-CREATE TABLE "pet_owner" (
-  "id" SERIAL PRIMARY KEY,
-  "pet_id" INT,
-  "owner_id" INT REFERENCES "owner"
+CREATE TABLE "owner" (
+    "id" SERIAL PRIMARY KEY,
+    "name" VARCHAR(100),
+    "deleted" BOOLEAN DEFAULT FALSE
 );
-
 
 INSERT INTO "owner" ("name")
 VALUES 
@@ -27,8 +25,15 @@ VALUES
 ('Ally'),
 ('Dane');
 
-CREATE TABLE "owner" (
-    "id" SERIAL PRIMARY KEY,
-    "name" VARCHAR(100),
-    "deleted" BOOLEAN DEFAULT FALSE
+CREATE TABLE "pet_owner" (
+  "id" SERIAL PRIMARY KEY,
+  "pet_id" INT REFERENCES "pet",
+  "owner_id" INT REFERENCES "owner"
 );
+
+INSERT INTO "pet_owner" ("pet_id", "owner_id")
+VALUES 
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 3);

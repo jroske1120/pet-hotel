@@ -3,7 +3,7 @@ import psycopg2
 import json
 # from os.path import exists
 # from os import makedirs
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template, Response
 app = Flask(__name__)
 # config = {
 #         user: process.env.PG_USER || null, //env var: PGUSER
@@ -31,8 +31,8 @@ def petRouter():
     cur.execute("""SELECT * FROM pet ORDER BY id ASC""")
     rows = cur.fetchall()
     colnames = [desc[0] for desc in cur.description]
+    # cur.close()
     print(colnames)
-    print(rows)
     response = []
     for x in range( 0, len(rows) ):
       response.append({'id':rows[x][0]})
@@ -43,6 +43,19 @@ def petRouter():
   except Exception as e:
     print(e)
     return []
+
+@app.route('/owners/<name>', methods=['POST'])
+def addOwnerRouter(name):
+  try:
+    cur.execute("""INSERT INTO "owner" ("name")
+VALUES 
+('{}');""".format(name))
+
+    return Response('', status=201, mimetype='application/json')
+  except Exception as e:
+    print(e)
+    return []
+    
     #   This is how it looks in js
   #   pool.query("""SELECT * FROM movies ORDER BY title ASC""")
   #     .then( (results) => 
@@ -67,27 +80,6 @@ def petRouter():
   #   { id: 7, }
   # ]
 
-
-# router.put('/:id', (req, res) => {
-#   // return all genres
-#   const queryText = `UPDATE movies
-#                     SET title=$1,
-#                     description=$2
-#                     WHERE ID=$3`;
-#   const queryValues = [
-#     req.body.title,
-#     req.body.description,
-#     req.body.id,
-#   ]
-#   pool.query(queryText, queryValues)
-#       .then( (result) => {
-#           res.sendStatus(200);
-#       })
-#       .catch( (error) => {
-#           console.log(`Error on query ${error}`);
-#           res.sendStatus(500);
-#       });
-# });
 
 
 # module.exports = router;
