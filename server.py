@@ -21,6 +21,7 @@ app = Flask(__name__)
 db = "dbname=%s host=%s " % ('pet_hotel', 'localhost')
 schema = "schema.sql"
 conn = psycopg2.connect(db)
+conn.autocommit = True
 
 cur = conn.cursor()
 
@@ -50,6 +51,8 @@ def addOwnerRouter(name):
     cur.execute("""INSERT INTO "owner" ("name")
 VALUES 
 ('{}');""".format(name))
+
+    print(name)
 
     return Response('', status=201, mimetype='application/json')
   except Exception as e:
