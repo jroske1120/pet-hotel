@@ -59,6 +59,17 @@ VALUES
     print(e)
     return []
     
+
+@app.route('/pets/<id>', methods=['DELETE'])
+def deletePetRouter(id):
+  try:
+    cur.execute("""DELETE FROM pet WHERE id ={};""".format(id))
+    print(id)
+
+    return Response('', status=201, mimetype='application/json')
+  except Exception as e:
+    print(e)
+    return []
     #   This is how it looks in js
   #   pool.query("""SELECT * FROM movies ORDER BY title ASC""")
   #     .then( (results) => 
