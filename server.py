@@ -3,7 +3,7 @@ import psycopg2
 import json
 # from os.path import exists
 # from os import makedirs
-from flask import Flask, jsonify, render_template, Response
+from flask import Flask, jsonify, render_template, Response, request
 app = Flask(__name__)
 # config = {
 #         user: process.env.PG_USER || null, //env var: PGUSER
@@ -26,25 +26,42 @@ conn.autocommit = True
 cur = conn.cursor()
 
 
-@app.route('/pets', methods=['GET'])
+# Get the pets
+@app.route('/pets/', methods=['GET', 'POST'])
 def petRouter():
   try:
-    cur.execute("""SELECT * FROM pet ORDER BY id ASC""")
-    rows = cur.fetchall()
-    colnames = [desc[0] for desc in cur.description]
-    # cur.close()
-    print(colnames)
-    response = []
-    for x in range( 0, len(rows) ):
-      response.append({'id':rows[x][0]})
-      for y in range(1, len(colnames)):
-        response[x].update({colnames[y]:rows[x][y]})
+    if(request.method =='GET'):
+      cur.execute("""SELECT * FROM pet ORDER BY id ASC""")
+      rows = cur.fetchall()
+      colnames = [desc[0] for desc in cur.description]
+      # cur.close()
+      print(colnames)
+      response = []
+      for x in range( 0, len(rows) ):
+        response.append({'id':rows[x][0]})
+        for y in range(1, len(colnames)):
+          response[x].update({colnames[y]:rows[x][y]})
 
-    return jsonify(response)
+      return jsonify(response)
+    elif request.method=='POST' :
+      #data = request.data
+      data = request.get_json()
+      print("request data", data['name'])
+
+      cur.execute("""INSERT INTO "pet" ("name", "breed", "color")
+                  VALUES 
+                  ('{}', '{}', '{}');""".format(data['name'], data['breed'], data['color']))
+
+      # print(Pet)
+
+      return Response('', status=201, mimetype='application/json')
+
   except Exception as e:
     print(e)
-    return []
+    return Response(e)
 
+
+# add an owner
 @app.route('/owners/<name>', methods=['POST'])
 def addOwnerRouter(name):
   try:
@@ -58,8 +75,40 @@ VALUES
   except Exception as e:
     print(e)
     return []
-    
 
+# Add a pet
+# pet = {
+#     name: '',
+#     breed: '',
+#     color: ''
+# }
+
+# dictionary, but you can't pass a dictionary via url
+
+# @app.route('/pets/<pet>', methods=['POST'])
+# def addPetRouter(pet):
+#     # trying something
+#       try:
+#     new_pet = (
+#         name=request.json['name'],
+#         breed=request.json['breed'],
+#         color=request.json['color']
+#     )
+#     data = request.data
+#     print("request data", data)
+#     print("new_pet", new_pet)
+#     cur.execute("""INSERT INTO "owner" ("name")
+# VALUES 
+# ('{}');""".format(name))
+
+#     print(name)
+
+#     return Response('', status=201, mimetype='application/json')
+#   except Exception as e:
+#     print(e)
+#     return []
+
+# delete pets
 @app.route('/pets/<id>', methods=['DELETE'])
 def deletePetRouter(id):
   try:
