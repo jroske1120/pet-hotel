@@ -1,5 +1,6 @@
 # import os
 import psycopg2
+import json
 # from os.path import exists
 # from os import makedirs
 from flask import Flask, jsonify
@@ -30,8 +31,8 @@ def petRouter():
     cur.execute("""SELECT * FROM pet ORDER BY id ASC""")
     rows = cur.fetchall()
     colnames = [desc[0] for desc in cur.description]
-    cur.close()
     print(colnames)
+    print(rows)
     response = []
     for x in range( 0, len(rows) ):
       response.append({'id':rows[x][0]})
