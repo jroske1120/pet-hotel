@@ -1,10 +1,12 @@
 # import os
 import psycopg2
 import json
+from flask_cors import CORS
 # from os.path import exists
 # from os import makedirs
 from flask import Flask, jsonify, render_template, Response, request
 app = Flask(__name__)
+CORS(app)
 # config = {
 #         user: process.env.PG_USER || null, //env var: PGUSER
 #         password: process.env.DATABASE_SECRET || null, //env var: PGPASSWORD
@@ -27,16 +29,39 @@ conn.autocommit = True
 cur = conn.cursor()
 
 
-# Get the pets
-@app.route('/pets/', methods=['GET', 'POST'])
-def petRouter():
-  try:
-    if(request.method =='GET'):
-      cur.execute("""SELECT * FROM pet ORDER BY id ASC""")
+@app.route('/api/owner/', methods=['GET'])
+def ownerRouter():
+      cur.execute("""SELECT * FROM owner
+      WHERE deleted=FALSE
+      ORDER BY id ASC""")
       rows = cur.fetchall()
       colnames = [desc[0] for desc in cur.description]
       # cur.close()
-      conn.commit()
+      # conn.commit()
+
+      print(colnames)
+      response = []
+      for x in range( 0, len(rows) ):
+        response.append({'id':rows[x][0]})
+        for y in range(1, len(colnames)):
+          response[x].update({colnames[y]:rows[x][y]})
+
+      return jsonify(response)
+
+# Get the pets
+@app.route('/api/pet/', methods=['GET', 'POST'])
+def petRouter():
+  try:
+    if(request.method =='GET'):
+      cur.execute("""SELECT * FROM "pet"
+      JOIN "owner" on "owner"."id" = "pet"."owner_id"
+      WHERE deleted=FALSE
+      ORDER BY "pet"."id" ASC
+      """)
+      rows = cur.fetchall()
+      colnames = [desc[0] for desc in cur.description]
+      # cur.close()
+      # conn.commit()
 
       print(colnames)
       response = []
@@ -52,32 +77,32 @@ def petRouter():
       data = request.get_json()
       print("request data", data['name'])
 
-      cur.execute("""INSERT INTO "pet" ("name", "breed", "color")
-                  VALUES 
-                  ('{}', '{}', '{}') RETURNING id;""".format(data['name'], data['breed'], data['color']))
-      petId = cur.fetchone()[0]
-      print("petID is:", petId)
-      cur.execute("""INSERT INTO "pet_owner" ("pet_id", "owner_id")
-                  VALUES ({}, {})""".format( petId, data['owner'] ))
-    #   conn.commit()
+      cur.execute("""INSERT INTO "pet" ("pets_name", "breed", "color", "owner_id")
+                  VALUES
+                  ('{}', '{}', '{}', '{}');""".format(data['pets_name'], data['breed'], data['color'], data['owner_id']))
+      # petId = cur.fetchone()[0]
+      # print("petID is:", petId)
+      # cur.execute("""INSERT INTO "pet_owner" ("pet_id", "owner_id")
+      #             VALUES ({}, {})""".format( petId, data['owner'] ))
+      conn.commit()
       # conn.close()
       return Response('', status=201, mimetype='application/json')
 
   except Exception as e:
     print(e)
     return Response(e)
-  finally:
-    # if conn is not None:
-    print('inside finally')
-    conn.close()
+  # finally:
+  #   # if conn is not None:
+  #   print('inside finally')
+  #   conn.close()
 
 
 # add an owner
-@app.route('/owners/<name>', methods=['POST'])
+@app.route('/api/owner/<name>', methods=['POST'])
 def addOwnerRouter(name):
   try:
     cur.execute("""INSERT INTO "owner" ("name")
-VALUES 
+VALUES
 ('{}');""".format(name))
     conn.commit()
 
@@ -87,9 +112,9 @@ VALUES
   except Exception as e:
     print(e)
     return []
-  finally:
-    if conn is not None:
-      conn.close()
+  # finally:
+  #   if conn is not None:
+  #     conn.close()
 
 
 # Add a pet
@@ -114,7 +139,7 @@ VALUES
 #     print("request data", data)
 #     print("new_pet", new_pet)
 #     cur.execute("""INSERT INTO "owner" ("name")
-# VALUES 
+# VALUES
 # ('{}');""".format(name))
 
 #     print(name)
@@ -124,8 +149,8 @@ VALUES
 #     print(e)
 #     return []
 
-# delete pets
-@app.route('/pets/<id>', methods=['DELETE'])
+# DELETE pets
+@app.route('/api/pet/<id>', methods=['DELETE'])
 def deletePetRouter(id):
   try:
     cur.execute("""DELETE FROM pet WHERE id ={};""".format(id))
@@ -136,15 +161,18 @@ def deletePetRouter(id):
   except Exception as e:
     print(e)
     return []
-  finally:
-    if conn is not None:
-      conn.close()
+  # finally:
+  #   if conn is not None:
+  #     conn.close()
 
-
-@app.route('/pets/<id>', methods=['PUT'])
+########PUT##########
+@app.route('/api/pet/checkin/<id>', methods=['PUT'])
 def checkInPetRouter(id):
   try:
-    cur.execute("""UPDATE pet SET "checkedIn" = true WHERE id ={};""".format(id))
+
+    data = request.get_json()
+
+    cur.execute("""UPDATE pet SET "checkedIn" = {} WHERE id ={};""".format(data['checked_in'], id))
     print(id)
     conn.commit()
 
@@ -152,13 +180,13 @@ def checkInPetRouter(id):
   except Exception as e:
     print(e)
     return []
-  finally:
-    if conn is not None:
-      conn.close()
+  # finally:
+  #   if conn is not None:
+  #     conn.close()
 
     #   This is how it looks in js
   #   pool.query("""SELECT * FROM movies ORDER BY title ASC""")
-  #     .then( (results) => 
+  #     .then( (results) =>
   #     rows = results
   #   [
   #     {id: 7, petname: 'spike', animal: 'dog'}
@@ -167,7 +195,7 @@ def checkInPetRouter(id):
   # y ->      0     1         2         3
   # x
   # 0    [7,     spike,    dog,      attribute]
-  
+
   # 1    [8,     fido,     dog,      attribute]
 
   #   [ id, petname, animal, columnTitle]
@@ -185,80 +213,6 @@ def checkInPetRouter(id):
 # module.exports = router;
 
 
-# @app.route('/details/<id>', methods=['GET'])
-# def detailRouter(id):
-#   try:
-#     cur.execute('''SELECT
-#       "movies"."title",
-#       "movies"."poster",
-#       "movies"."description",
-#       ARRAY_AGG("name") "genres"
-#     FROM "movies"
-#     JOIN "movies_genres" ON "movie_id" = "movies"."id"
-#     JOIN "genres" ON "genre_id" = "genres"."id"
-#     WHERE "movies"."id" = {}
-#     GROUP BY "movies"."id"
-#     ORDER BY "movies"."title" ASC'''.format(id))
-#     rows = cur.fetchall()
-#     colnames = [desc[0] for desc in cur.description]
-#     cur.close()
-#     print(colnames)
-#     response = []
-#     for x in range( 0, len(rows) ):
-#       response.append({'id':id })
-#       for y in range(0, len(colnames)):
-#         response[x].update({colnames[y]:rows[x][y]})
-#     print(response)
-#     return jsonify(response)
-#   except Exception as e:
-#     print(e)
-#     return []
-
-# @app.route('/genres', methods=['GET'])
-# def genreRouter():
-#   try:
-#     cur.execute("""SELECT * FROM genres ORDER BY id ASC""")
-#     rows = cur.fetchall()
-#     colnames = [desc[0] for desc in cur.description]
-#     cur.close()
-#     print(colnames)
-#     response = []
-#     for x in range( 0, len(rows) ):
-#       response.append({'id':rows[x][0]})
-#       for y in range(1, len(colnames)):
-#         response[x].update({colnames[y]:rows[x][y]})
-
-#     return jsonify(response)
-#   except Exception as e:
-#     print(e)
-#     return []
-
 
 if __name__ == "__main__":
   app.run(debug=True)
-
-
-# const express = require('express');
-# const app = express();
-# const bodyParser = require('body-parser');
-# const port = process.env.PORT || 5000;
-
-# // require routers
-# const detailsRouter = require('./routes/details.router');
-# const genresRouter = require('./routes/genres.router');
-# const moviesRouter = require('./routes/movies.router');
-
-# /** ---------- MIDDLEWARE ---------- **/
-# app.use(bodyParser.json()); // needed for angular requests
-# app.use(express.static('build'));
-
-# /** ---------- ROUTES ---------- **/
-# app.use('/details', detailsRouter);
-# app.use('/genres', genresRouter);
-# app.use('/movies', moviesRouter);
-
-
-# /** ---------- START SERVER ---------- **/
-# app.listen(port, function () {
-#     console.log('Listening on port: ', port);
-# });
