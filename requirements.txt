@@ -1,6 +1,3 @@
-# 'pip freeze > requirements.txt' got us this file, kinda like 
-#pkg.json for python. This creates the .txt, install installs what isn't there
-# 'pip install -r requirements.txt' is like npm install "look at this file, install shit"
 astroid==2.4.2
 click==7.1.2
 Flask==1.1.2
@@ -10,7 +7,9 @@ Jinja2==2.11.2
 lazy-object-proxy==1.4.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
+psycopg2-binary==2.8.5
 pylint==2.5.3
+python-dotenv==0.14.0
 six==1.15.0
 toml==0.10.1
 Werkzeug==1.0.1
